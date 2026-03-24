@@ -1,0 +1,71 @@
+package com.hhh.url.shorter_url.controller;
+
+import com.hhh.url.shorter_url.common.ApiResponse;
+import com.hhh.url.shorter_url.dto.BulkUrlResponse;
+import com.hhh.url.shorter_url.dto.UrlRequest;
+import com.hhh.url.shorter_url.dto.UrlResponse;
+import com.hhh.url.shorter_url.model.Url;
+import com.hhh.url.shorter_url.service.UrlService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/urls")
+@RequiredArgsConstructor
+public class UrlController {
+
+    private final UrlService urlService;
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<UrlResponse>> createUrl(@Valid @RequestBody UrlRequest request) {
+        UrlResponse data = urlService.create(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(data, "Url created successfully"));
+    }
+//    @PostMapping
+//    public ResponseEntity<ApiResponse<List<BulkUrlResponse>>> createBulkUrls(@Valid @RequestBody UrlRequest request) {
+//        UrlResponse data = urlService.create(request);
+//        return ResponseEntity
+//                .status(HttpStatus.CREATED)
+//                .body(ApiResponse.success(data, "Url created successfully"));
+//    }
+    @GetMapping("/redirect")
+    public ResponseEntity<ApiResponse<String>> redirect(@RequestParam String shortCode){
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(urlService.redirect(shortCode), "Url created successfully"));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<UrlResponse>> getById(@PathVariable long id) {
+        UrlResponse data = urlService.getById(id);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<UrlResponse>>> getAll(@PageableDefault(size = 20) Pageable pageable) {
+        Page<UrlResponse> data = urlService.getAll(pageable);
+        return ResponseEntity.ok(ApiResponse.success(data));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<UrlResponse>> update(@PathVariable long id, @Valid @RequestBody UrlRequest request) {
+        UrlResponse data = urlService.update(id, request);
+        return ResponseEntity.ok(ApiResponse.success(data, "Url updated successfully"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable long id) {
+        urlService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Url deleted successfully"));
+    }
+}

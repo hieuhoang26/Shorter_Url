@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: shorter-url
+  datasource:
+    url: jdbc:postgresql://localhost:5432/shorter_url
+    username: postgres
+    password: 12345678
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/baseline-master.xml
+    enabled: true
+
+aws:
+  s3:
+    bucket: shorter-url-bucket
+    region: us-east-1
+    access-key: ${AWS_ACCESS_KEY:dummy}
+    secret-key: ${AWS_SECRET_KEY:dummy}
+
+server:
+  port: 8080
