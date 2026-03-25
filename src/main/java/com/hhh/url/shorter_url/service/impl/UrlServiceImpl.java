@@ -1,5 +1,7 @@
 package com.hhh.url.shorter_url.service.impl;
 
+import com.hhh.url.shorter_url.dto.response.PreSignResponse;
+import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.exception.ResourceNotFoundException;
 import com.hhh.url.shorter_url.dto.UrlRequest;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
@@ -25,6 +27,10 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import static com.hhh.url.shorter_url.util.Constant.TEMPLATE_FILE;
+import static com.hhh.url.shorter_url.util.Constant.URL_LOCAL;
+
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,9 +40,7 @@ public class UrlServiceImpl implements UrlService {
     private final Base62Service base62Service;
     private final UrlMapper urlMapper;
     private final ObjectStorageService objectStorageService;
-    private final String URL_LOCAL = "http://localhost:8080";
 
-    private final static String TEMPLATE_FILE = "import_sample.xlsx";
 
     @Value("classpath:/static/"+TEMPLATE_FILE)
     private Resource resource;
@@ -56,6 +60,7 @@ public class UrlServiceImpl implements UrlService {
                 objectStorageService.uploadObject(TEMPLATE_FILE, localContent);
             } else {
                 byte[] remoteContent = objectStorageService.downloadObject(TEMPLATE_FILE);
+                log.info("Template file downloaded...");
                 if (!MessageDigest.isEqual(calculateHash(localContent), calculateHash(remoteContent))) {
                     log.info("Template file changed, updating storage...");
                     objectStorageService.uploadObject(TEMPLATE_FILE, localContent);
@@ -123,5 +128,16 @@ public class UrlServiceImpl implements UrlService {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
         urlRepository.delete(entity);
+    }
+
+    @Override
+    public TemplateFileResponse getTemplate() {
+        PreSignResponse response = objectStorageService.generatePresignedUrl(TEMPLATE_FILE,"GET");
+        return TemplateFileResponse.builder()
+                .preSignUrl(response.getPreSignUrl())
+                .fileName(TEMPLATE_FILE)
+                .description("Template for import bulk link")
+                .expireAt(response.getExpireAt())
+                .build();
     }
 }

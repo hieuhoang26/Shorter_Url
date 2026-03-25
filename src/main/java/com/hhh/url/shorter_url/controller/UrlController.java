@@ -2,6 +2,7 @@ package com.hhh.url.shorter_url.controller;
 
 import com.hhh.url.shorter_url.common.ApiResponse;
 import com.hhh.url.shorter_url.dto.UrlRequest;
+import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.service.UrlService;
 import jakarta.validation.Valid;
@@ -39,6 +40,12 @@ public class UrlController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(urlService.redirect(shortCode), "Url created successfully"));
+    }
+    @GetMapping("/template")
+    public ResponseEntity<ApiResponse<TemplateFileResponse>> getTemplate(){
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(urlService.getTemplate()));
     }
 
     @GetMapping("/{id}")

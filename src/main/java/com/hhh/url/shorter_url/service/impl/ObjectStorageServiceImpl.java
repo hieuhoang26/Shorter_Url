@@ -20,6 +20,9 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.time.Duration;
+import java.util.Objects;
+
+import static com.hhh.url.shorter_url.util.Constant.TEMPLATE_FILE;
 
 @Service
 @RequiredArgsConstructor
@@ -62,7 +65,9 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
 
     @Override
     public PreSignResponse generatePresignedUrl(String fileName, String method) {
-        String key = "file/%s".formatted(fileName);
+        String key = Objects.equals(fileName,TEMPLATE_FILE)
+                ? fileName
+                : "file/%s".formatted(fileName);
         log.info("Generating presigned URL for object {} in bucket {} with method {}", key, bucketName, method);
         // Upload
         if ("PUT".equalsIgnoreCase(method)) {
