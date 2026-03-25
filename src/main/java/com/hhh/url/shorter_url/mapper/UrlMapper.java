@@ -1,7 +1,7 @@
 package com.hhh.url.shorter_url.mapper;
 
 import com.hhh.url.shorter_url.dto.UrlRequest;
-import com.hhh.url.shorter_url.dto.UrlResponse;
+import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.model.Url;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

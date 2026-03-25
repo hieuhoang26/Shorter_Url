@@ -18,10 +18,21 @@ spring:
 
 aws:
   s3:
-    bucket: shorter-url-bucket
-    region: us-east-1
-    access-key: ${AWS_ACCESS_KEY:dummy}
-    secret-key: ${AWS_SECRET_KEY:dummy}
+    bucket: shorter-url-390402567579-ap-southeast-1-an
+    region: ap-southeast-1
+    access-key: ${AWS_ACCESS_KEY:AKIAVVZOONWNQCOU66K3}
+    secret-key: ${AWS_SECRET_KEY:0OcOtbins+4nCdN2K+wkuS+oT1p+R2JEKJI1TW8V}
 
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always   # hiển thị detail của S3
+      probes:
+        enabled: true        # enable liveness/readiness (optional)

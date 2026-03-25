@@ -1,10 +1,8 @@
 package com.hhh.url.shorter_url.controller;
 
 import com.hhh.url.shorter_url.common.ApiResponse;
-import com.hhh.url.shorter_url.dto.BulkUrlResponse;
 import com.hhh.url.shorter_url.dto.UrlRequest;
-import com.hhh.url.shorter_url.dto.UrlResponse;
-import com.hhh.url.shorter_url.model.Url;
+import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.service.UrlService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +12,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/urls")

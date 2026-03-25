@@ -1,9 +1,11 @@
 package com.hhh.url.shorter_url.service.impl;
 
+import com.hhh.url.shorter_url.dto.response.PreSignResponse;
 import com.hhh.url.shorter_url.exception.ResourceNotFoundException;
 import com.hhh.url.shorter_url.service.ObjectStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -27,8 +29,11 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+
     @Override
-    public void uploadObject(String bucketName, String key, byte[] content) {
+    public void uploadObject(String key, byte[] content) {
         log.info("Uploading object {} to bucket {}", key, bucketName);
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -39,7 +44,7 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
     }
 
     @Override
-    public byte[] downloadObject(String bucketName, String key) {
+    public byte[] downloadObject(String key) {
         log.info("Downloading object {} from bucket {}", key, bucketName);
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
@@ -56,8 +61,10 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
     }
 
     @Override
-    public String generatePresignedUrl(String bucketName, String key, String method, Duration expiration) {
+    public PreSignResponse generatePresignedUrl(String fileName, String method) {
+        String key = "file/%s".formatted(fileName);
         log.info("Generating presigned URL for object {} in bucket {} with method {}", key, bucketName, method);
+        // Upload
         if ("PUT".equalsIgnoreCase(method)) {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -65,30 +72,44 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
                     .build();
 
             PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
-                    .signatureDuration(expiration)
+                    .signatureDuration(Duration.ofMinutes(15))
                     .putObjectRequest(putObjectRequest)
                     .build();
 
-            return s3Presigner.presignPutObject(presignRequest).url().toString();
-        } else if ("GET".equalsIgnoreCase(method)) {
+            return PreSignResponse.builder()
+                    .object(key)
+                    .preSignUrl(s3Presigner.presignPutObject(presignRequest).url().toString())
+                    .fileName(fileName)
+                    .object(key)
+                    .expireAt(15L)
+                    .build();
+        }
+        // Download
+        else if ("GET".equalsIgnoreCase(method)) {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(expiration)
+                    .signatureDuration(Duration.ofMinutes(15))
                     .getObjectRequest(getObjectRequest)
                     .build();
 
-            return s3Presigner.presignGetObject(presignRequest).url().toString();
+            return PreSignResponse.builder()
+                    .object(key)
+                    .preSignUrl(s3Presigner.presignGetObject(presignRequest).url().toString())
+                    .fileName(fileName)
+                    .object(key)
+                    .expireAt(15L)
+                    .build();
         } else {
             throw new IllegalArgumentException("Method " + method + " not supported for presigned URL");
         }
     }
 
     @Override
-    public boolean verifyObject(String bucketName, String key) {
+    public boolean verifyObject(String key) {
         log.info("Verifying object {} in bucket {}", key, bucketName);
         HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
                 .bucket(bucketName)

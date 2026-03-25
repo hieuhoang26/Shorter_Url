@@ -1,7 +1,7 @@
 package com.hhh.url.shorter_url.service;
 
 import com.hhh.url.shorter_url.dto.UrlRequest;
-import com.hhh.url.shorter_url.dto.UrlResponse;
+import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

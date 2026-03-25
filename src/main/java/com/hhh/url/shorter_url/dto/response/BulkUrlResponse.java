@@ -1,4 +1,4 @@
-package com.hhh.url.shorter_url.dto;
+package com.hhh.url.shorter_url.dto.response;
 
 public record BulkUrlResponse(
         String shortCode,
