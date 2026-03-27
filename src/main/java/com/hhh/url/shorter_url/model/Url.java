@@ -1,6 +1,5 @@
 package com.hhh.url.shorter_url.model;
 
-import com.hhh.url.shorter_url.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
