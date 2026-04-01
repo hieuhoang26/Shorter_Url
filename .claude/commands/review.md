@@ -1,0 +1,5 @@
+Run a code review on the staged changes:
+1. Check for SOLID principle violations
+2. Verify exception handling
+3. Confirm test coverage exists
+4. Flag any N+1 query risks

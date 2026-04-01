@@ -69,7 +69,6 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
                 ? fileName
                 : "file/%s".formatted(fileName);
         log.info("Generating presigned URL for object {} in bucket {} with method {}", key, bucketName, method);
-        // Upload
         if ("PUT".equalsIgnoreCase(method)) {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -85,12 +84,9 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
                     .object(key)
                     .preSignUrl(s3Presigner.presignPutObject(presignRequest).url().toString())
                     .fileName(fileName)
-                    .object(key)
                     .expireAt(15L)
                     .build();
-        }
-        // Download
-        else if ("GET".equalsIgnoreCase(method)) {
+        } else if ("GET".equalsIgnoreCase(method)) {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
@@ -105,7 +101,6 @@ public class ObjectStorageServiceImpl implements ObjectStorageService {
                     .object(key)
                     .preSignUrl(s3Presigner.presignGetObject(presignRequest).url().toString())
                     .fileName(fileName)
-                    .object(key)
                     .expireAt(15L)
                     .build();
         } else {
