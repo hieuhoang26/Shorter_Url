@@ -15,6 +15,11 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/baseline-master.xml
     enabled: true
+  batch:
+    jdbc:
+      initialize-schema: always   # create Spring Batch job tables on PostgreSQL
+    job:
+      enabled: false              # prevent auto-run of jobs at startup
 
 aws:
   s3:

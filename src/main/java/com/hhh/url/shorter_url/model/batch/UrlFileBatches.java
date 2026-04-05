@@ -1,11 +1,11 @@
 package com.hhh.url.shorter_url.model.batch;
 
 import com.hhh.url.shorter_url.model.BaseEntity;
+import com.hhh.url.shorter_url.util.BatchStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.batch.core.BatchStatus;
 
-import java.util.List;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -15,12 +15,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UrlFileBatches extends BaseEntity{
+public class UrlFileBatches extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(name = "file_name", nullable = false)
     private String fileName;
@@ -35,12 +35,18 @@ public class UrlFileBatches extends BaseEntity{
     @Column(name = "total_records", nullable = false)
     private int totalRecords;
 
+    @Column(name = "processed_records", nullable = false)
+    private int processedRecords;
+
     @Column(name = "success_records", nullable = false)
     private int successRecords;
 
     @Column(name = "failed_records", nullable = false)
     private int failedRecords;
 
-    @OneToMany(mappedBy = "batch", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UrlFileBatchRecords> records;
+    @Column(name = "started_at")
+    private OffsetDateTime startedAt;
+
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
 }

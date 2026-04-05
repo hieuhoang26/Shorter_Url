@@ -5,6 +5,7 @@ import com.hhh.url.shorter_url.util.RecordStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -14,11 +15,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UrlFileBatchRecords extends BaseEntity{
+public class UrlFileBatchRecords extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
     @Column(name = "row_number", nullable = false)
@@ -36,6 +37,9 @@ public class UrlFileBatchRecords extends BaseEntity{
 
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
+
+    @Column(name = "processed_at")
+    private OffsetDateTime processedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "batch_id", nullable = false)
