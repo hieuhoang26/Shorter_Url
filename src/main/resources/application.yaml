@@ -13,7 +13,7 @@ spring:
       hibernate:
         format_sql: true
   liquibase:
-    change-log: classpath:db/changelog/baseline-master.xml
+    change-log: classpath:db/changelog/db-changelog.xml
     enabled: true
   batch:
     jdbc:

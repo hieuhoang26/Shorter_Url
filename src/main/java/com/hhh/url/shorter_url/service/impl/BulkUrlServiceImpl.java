@@ -1,5 +1,6 @@
 package com.hhh.url.shorter_url.service.impl;
 
+import com.hhh.url.shorter_url.dto.request.ImportFileRequest;
 import com.hhh.url.shorter_url.dto.response.BatchStatusResponse;
 import com.hhh.url.shorter_url.exception.BadRequestException;
 import com.hhh.url.shorter_url.exception.ResourceNotFoundException;
@@ -32,20 +33,23 @@ public class BulkUrlServiceImpl implements BulkUrlService {
     private final Job urlImportJob;
 
     @Override
-    @Transactional
-    public UUID createBatch(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
+    public UUID createBatch(ImportFileRequest request) {
+
+        String originalFilename = request.getFileName() != null
+                ? request.getFileName()
+                : "unknown.xlsx";
+
+        String objectStoragePath = request.getObjectUrl();
+
+        boolean uploaded = objectStorageService.verifyObject(objectStoragePath);
+        if (!uploaded){
             throw new BadRequestException("Uploaded file must not be empty");
         }
-
-        String originalFilename = file.getOriginalFilename() != null
-                ? file.getOriginalFilename()
-                : "upload.xlsx";
 
         // Step 1 — save batch with PENDING status (get UUID first)
         UrlFileBatches batch = UrlFileBatches.builder()
                 .fileName(originalFilename)
-                .filePath("")
+                .filePath(objectStoragePath)
                 .status(BatchStatus.PENDING)
                 .totalRecords(0)
                 .processedRecords(0)
@@ -53,16 +57,6 @@ public class BulkUrlServiceImpl implements BulkUrlService {
                 .failedRecords(0)
                 .build();
         batch = batchRepository.save(batch);
-
-        // Step 2 — upload file to S3 under the batch-scoped key
-        String objectStoragePath = "batches/" + batch.getId() + "/" + originalFilename;
-        try {
-            objectStorageService.uploadObject(objectStoragePath, file.getBytes());
-        } catch (IOException e) {
-            throw new BadRequestException("Failed to read uploaded file: " + e.getMessage());
-        }
-        batch.setFilePath(objectStoragePath);
-        batchRepository.save(batch);
 
         // Step 3 — launch async Spring Batch job
         UUID batchId = batch.getId();

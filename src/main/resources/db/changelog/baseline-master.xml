@@ -5,7 +5,8 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <include file="V1__create_db.sql" relativeToChangelogFile="false"/>
-    <include file="VV2__create_batch_tables.sql" relativeToChangelogFile="false"/>
+    <include file="V1__create_db.sql" relativeToChangelogFile="true"/>
+    <include file="V2__create_batch_tables.sql" relativeToChangelogFile="true"/>
+    <include file="V3__add_url_fields.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

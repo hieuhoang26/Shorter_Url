@@ -6,5 +6,4 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="baseline-master.xml" relativeToChangelogFile="true"/>
-
 </databaseChangeLog>

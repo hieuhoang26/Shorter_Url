@@ -1,4 +1,4 @@
-package com.hhh.url.shorter_url.batch.reader;
+package com.hhh.url.shorter_url.batch.mapper;
 
 import org.apache.poi.ss.usermodel.Row;
 

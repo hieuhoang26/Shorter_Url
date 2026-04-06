@@ -1,21 +1,13 @@
 package com.hhh.url.shorter_url.controller;
 
 import com.hhh.url.shorter_url.common.ApiResponse;
-import com.hhh.url.shorter_url.dto.PresignedUrlRequest;
+import com.hhh.url.shorter_url.dto.request.PresignedUrlRequest;
 import com.hhh.url.shorter_url.dto.response.PreSignResponse;
 import com.hhh.url.shorter_url.service.ObjectStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/v1/storage")

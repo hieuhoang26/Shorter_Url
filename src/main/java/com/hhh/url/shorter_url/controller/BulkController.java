@@ -1,6 +1,7 @@
 package com.hhh.url.shorter_url.controller;
 
 import com.hhh.url.shorter_url.common.ApiResponse;
+import com.hhh.url.shorter_url.dto.request.ImportFileRequest;
 import com.hhh.url.shorter_url.dto.response.BatchStatusResponse;
 import com.hhh.url.shorter_url.dto.response.BulkUploadResponse;
 import com.hhh.url.shorter_url.service.BulkUrlService;
@@ -23,13 +24,13 @@ public class BulkController {
     /**
      * Accepts a CSV file, creates a batch, and triggers async processing.
      *
-     * @param file multipart CSV file with original_url column
+     * @param request multipart CSV file with original_url column
      * @return 202 Accepted with the generated batchId
      */
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
     public ResponseEntity<ApiResponse<BulkUploadResponse>> uploadBatch(
-            @RequestParam("file") MultipartFile file) {
-        UUID batchId = bulkUrlService.createBatch(file);
+            @RequestBody ImportFileRequest request) {
+        UUID batchId = bulkUrlService.createBatch(request);
         return ResponseEntity
                 .status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.success(new BulkUploadResponse(batchId), "Batch created successfully"));

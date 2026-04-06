@@ -3,7 +3,7 @@ package com.hhh.url.shorter_url.service.impl;
 import com.hhh.url.shorter_url.dto.response.PreSignResponse;
 import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.exception.ResourceNotFoundException;
-import com.hhh.url.shorter_url.dto.UrlRequest;
+import com.hhh.url.shorter_url.dto.request.UrlRequest;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.mapper.UrlMapper;
 import com.hhh.url.shorter_url.model.Url;

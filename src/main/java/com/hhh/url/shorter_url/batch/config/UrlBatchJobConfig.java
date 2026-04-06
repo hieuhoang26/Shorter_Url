@@ -13,6 +13,7 @@ import com.hhh.url.shorter_url.service.Base62Service;
 import com.hhh.url.shorter_url.service.ObjectStorageService;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -32,20 +33,20 @@ public class UrlBatchJobConfig {
 
     private static final int CHUNK_SIZE = 100;
 
-    // ── Reader ───────────────────────────────────────────────────────────────
+    // Reader
 
     /**
      * Step-scoped reader; {@code objectStoragePath} is resolved from job parameters at runtime.
      */
     @Bean
-    @org.springframework.batch.core.configuration.annotation.StepScope
+    @StepScope
     public UrlExcelItemReader urlExcelItemReader(
             ObjectStorageService objectStorageService,
             @Value("#{jobParameters['objectStoragePath']}") String objectStoragePath) {
         return new UrlExcelItemReader(objectStorageService, objectStoragePath);
     }
 
-    // ── Processor ────────────────────────────────────────────────────────────
+    //  Processor
 
     /**
      * Step-scoped processor; {@code batchId} is resolved from job parameters at runtime.
@@ -61,7 +62,7 @@ public class UrlBatchJobConfig {
     // ── Writer ───────────────────────────────────────────────────────────────
 
     @Bean
-    @org.springframework.batch.core.configuration.annotation.StepScope
+    @StepScope
     public UrlBatchItemWriter urlBatchItemWriter(
             UrlRepository urlRepository,
             UrlFileBatchRecordRepository recordRepository,

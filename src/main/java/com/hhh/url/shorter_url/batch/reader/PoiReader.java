@@ -1,5 +1,9 @@
 package com.hhh.url.shorter_url.batch.reader;
 
+import com.hhh.url.shorter_url.batch.mapper.PoiRowMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -21,11 +25,16 @@ import java.util.Iterator;
  *
  * @param <T> the type produced per Excel row
  */
+@Slf4j
 public abstract class PoiReader<T> implements ItemStreamReader<T> {
+    private static final String CTX_ROW_INDEX = "poi.reader.row.index";
 
+    private static final int DEFAULT_MAX_EMPTY_ROWS = 5;
     private Workbook workbook;
     private Iterator<Row> rowIterator;
     private int currentRowNumber = 0;
+
+    private int emptyRowCount = 0;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
@@ -38,9 +47,26 @@ public abstract class PoiReader<T> implements ItemStreamReader<T> {
         Sheet sheet = workbook.getSheetAt(0);
         rowIterator = sheet.rowIterator();
         // skip header row
-        if (rowIterator.hasNext()) {
+        int headerCount = getHeaderRowCount();
+        for (int i = 0; i < headerCount && rowIterator.hasNext(); i++) {
             rowIterator.next();
         }
+
+        // restart support
+        if (executionContext.containsKey(CTX_ROW_INDEX)) {
+
+            int restartIndex = executionContext.getInt(CTX_ROW_INDEX);
+
+            log.info("Restarting Excel read from row {}", restartIndex);
+
+            for (int i = headerCount; i < restartIndex && rowIterator.hasNext(); i++) {
+                rowIterator.next();
+            }
+
+            currentRowNumber = restartIndex;
+        }
+
+
     }
 
     /**
@@ -52,9 +78,52 @@ public abstract class PoiReader<T> implements ItemStreamReader<T> {
         while (rowIterator != null && rowIterator.hasNext()) {
             Row row = rowIterator.next();
             currentRowNumber++;
-            T result = getRowMapper().mapRow(row, currentRowNumber);
-            if (result != null) {
-                return result;
+
+            if (isRowEmpty(row)) {
+
+                emptyRowCount++;
+
+                log.debug("Skipping blank row {}", currentRowNumber);
+
+                if (emptyRowCount >= getMaxEmptyRows()) {
+
+                    log.info(
+                            "Stopping read after {} consecutive empty rows at row {}",
+                            emptyRowCount,
+                            currentRowNumber
+                    );
+
+                    return null;
+                }
+
+                continue;
+            }
+
+            emptyRowCount = 0;
+
+            try {
+
+                T item = getRowMapper().mapRow(row, currentRowNumber);
+
+                if (item != null) {
+
+                    log.debug("Mapped row {}", currentRowNumber);
+
+                    return item;
+                }
+
+            } catch (Exception ex) {
+
+                log.error(
+                        "Error mapping row {}: {}",
+                        currentRowNumber,
+                        ex.getMessage(),
+                        ex
+                );
+
+                if (!shouldSkipOnError()) {
+                    throw ex;
+                }
             }
         }
         return null;
@@ -63,6 +132,7 @@ public abstract class PoiReader<T> implements ItemStreamReader<T> {
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         // no restart state needed — file is re-read from scratch on retry
+        executionContext.putInt(CTX_ROW_INDEX, currentRowNumber);
     }
 
     @Override
@@ -86,4 +156,50 @@ public abstract class PoiReader<T> implements ItemStreamReader<T> {
      * Provides the row mapper used to convert each POI {@link Row} into a {@code <T>} instance.
      */
     protected abstract PoiRowMapper<T> getRowMapper();
+
+    protected boolean isRowEmpty(Row row) {
+
+        if (row == null) {
+            return true;
+        }
+
+        for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
+
+            Cell cell = row.getCell(c);
+
+            if (cell == null) {
+                continue;
+            }
+
+            if (cell.getCellType() != CellType.BLANK) {
+
+                if (cell.getCellType() == CellType.STRING &&
+                        cell.getStringCellValue().trim().isEmpty()) {
+
+                    continue;
+                }
+
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected int getSheetIndex() {
+        return 0;
+    }
+
+    protected int getMaxEmptyRows() {
+        return DEFAULT_MAX_EMPTY_ROWS;
+    }
+
+    protected boolean shouldSkipOnError() {
+        return true;
+    }
+
+    protected int getHeaderRowCount() {
+        return 1;
+    }
+
 }

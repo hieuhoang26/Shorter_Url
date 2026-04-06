@@ -61,12 +61,23 @@ public class UrlBatchItemWriter implements ItemWriter<UrlFileBatchRecords> {
             Url url = new Url();
             url.setOriginalUrl(record.getOriginalUrl());
             url.setDomain(URL_LOCAL);
-            url.setExpiredAt(LocalDateTime.now().plus(Duration.ofDays(5)));
-            urlRepository.save(url);
+            url.setExpiredAt(record.getExpiredAt() != null
+                    ? record.getExpiredAt()
+                    : LocalDateTime.now().plus(Duration.ofDays(5)));
+            url.setDescription(record.getDescription());
+            url.setTags(record.getTags());
 
-            String shortCode = base62Service.generateShortCode(url.getId());
-            url.setShortCode(shortCode);
-            urlRepository.save(url);
+            String shortCode;
+            if (record.getCustomAlias() != null && !record.getCustomAlias().isBlank()) {
+                url.setShortCode(record.getCustomAlias());
+                urlRepository.save(url);
+                shortCode = record.getCustomAlias();
+            } else {
+                urlRepository.save(url);
+                shortCode = base62Service.generateShortCode(url.getId());
+                url.setShortCode(shortCode);
+                urlRepository.save(url);
+            }
 
             record.setShortCode(shortCode);
             record.setStatus(RecordStatus.SUCCESS);

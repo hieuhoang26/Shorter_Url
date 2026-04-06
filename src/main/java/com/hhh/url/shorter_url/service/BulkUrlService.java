@@ -1,5 +1,6 @@
 package com.hhh.url.shorter_url.service;
 
+import com.hhh.url.shorter_url.dto.request.ImportFileRequest;
 import com.hhh.url.shorter_url.dto.response.BatchStatusResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,7 +14,7 @@ public interface BulkUrlService {
      *
      * @return the generated batch ID
      */
-    UUID createBatch(MultipartFile file);
+    UUID createBatch(ImportFileRequest request);
 
     /**
      * Returns the current status and progress counters for a batch.

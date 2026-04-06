@@ -1,6 +1,6 @@
 package com.hhh.url.shorter_url.service;
 
-import com.hhh.url.shorter_url.dto.UrlRequest;
+import com.hhh.url.shorter_url.dto.request.UrlRequest;
 import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import org.springframework.data.domain.Page;

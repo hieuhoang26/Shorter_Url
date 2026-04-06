@@ -52,7 +52,7 @@ public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, UrlFileBa
                     .status(RecordStatus.FAILED)
                     .errorMessage("Invalid URL format: must be a valid http/https URL")
                     .processedAt(OffsetDateTime.now())
-                    .build();
+                                        .build();
         }
 
         return UrlFileBatchRecords.builder()
@@ -60,6 +60,10 @@ public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, UrlFileBa
                 .rowNumber(item.getRowNumber())
                 .originalUrl(originalUrl)
                 .status(RecordStatus.PENDING)
+                .customAlias(item.getCustomAlias())
+                .expiredAt(item.getExpiredAt())
+                .description(item.getDescription())
+                .tags(item.getTags())
                 .build();
     }
 

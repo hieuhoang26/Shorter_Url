@@ -28,4 +28,13 @@ public class Url extends BaseEntity {
 
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
+
+    @Column(name = "custom_alias", length = 100)
+    private String customAlias;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "tags", columnDefinition = "TEXT")
+    private String tags;
 }

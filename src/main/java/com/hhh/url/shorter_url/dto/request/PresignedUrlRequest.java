@@ -1,4 +1,4 @@
-package com.hhh.url.shorter_url.dto;
+package com.hhh.url.shorter_url.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

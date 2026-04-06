@@ -1,6 +1,8 @@
 package com.hhh.url.shorter_url.batch.reader;
 
 import com.hhh.url.shorter_url.batch.dto.UrlRowDTO;
+import com.hhh.url.shorter_url.batch.mapper.PoiRowMapper;
+import com.hhh.url.shorter_url.batch.mapper.UrlRowMapper;
 import com.hhh.url.shorter_url.service.ObjectStorageService;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;

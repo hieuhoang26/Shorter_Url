@@ -1,7 +1,7 @@
 package com.hhh.url.shorter_url.controller;
 
 import com.hhh.url.shorter_url.common.ApiResponse;
-import com.hhh.url.shorter_url.dto.UrlRequest;
+import com.hhh.url.shorter_url.dto.request.UrlRequest;
 import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.service.UrlService;
