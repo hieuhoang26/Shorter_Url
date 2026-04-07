@@ -1,7 +1,7 @@
 package com.hhh.url.shorter_url.batch.processor;
 
+import com.hhh.url.shorter_url.batch.dto.ProcessedUrlRow;
 import com.hhh.url.shorter_url.batch.dto.UrlRowDTO;
-import com.hhh.url.shorter_url.model.batch.UrlFileBatchRecords;
 import com.hhh.url.shorter_url.model.batch.UrlFileBatches;
 import com.hhh.url.shorter_url.repository.UrlFileBatchRepository;
 import com.hhh.url.shorter_url.util.RecordStatus;
@@ -9,13 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
 
 import java.net.URI;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Validates each URL row and builds a {@link UrlFileBatchRecords} entity ready for the writer.
+ * Validates each URL row and produces a {@link ProcessedUrlRow} ready for the writer.
  *
- * <p>Records with an invalid or blank URL are returned with {@link RecordStatus#FAILED} so the
+ * <p>Rows with an invalid or blank URL are returned with {@link RecordStatus#FAILED} so the
  * writer can persist the failure without touching the {@code url} table. Valid URLs are returned
  * with {@link RecordStatus#PENDING}; the writer completes them by inserting the short code.
  *
@@ -24,7 +23,7 @@ import java.util.UUID;
  * issuing a SELECT — safe across chunk transaction boundaries.
  */
 @Slf4j
-public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, UrlFileBatchRecords> {
+public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, ProcessedUrlRow> {
 
     private final UrlFileBatchRepository batchRepository;
     private final UUID batchId;
@@ -36,7 +35,7 @@ public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, UrlFileBa
     }
 
     @Override
-    public UrlFileBatchRecords process(UrlRowDTO item) {
+    public ProcessedUrlRow process(UrlRowDTO item) {
         if (batchRef == null) {
             batchRef = batchRepository.getReferenceById(batchId);
         }
@@ -45,26 +44,30 @@ public class UrlBatchItemProcessor implements ItemProcessor<UrlRowDTO, UrlFileBa
 
         if (!isValidUrl(originalUrl)) {
             log.warn("Row {} — invalid URL '{}', marking FAILED", item.getRowNumber(), originalUrl);
-            return UrlFileBatchRecords.builder()
-                    .batch(batchRef)
-                    .rowNumber(item.getRowNumber())
-                    .originalUrl(originalUrl != null ? originalUrl : "")
-                    .status(RecordStatus.FAILED)
-                    .errorMessage("Invalid URL format: must be a valid http/https URL")
-                    .processedAt(OffsetDateTime.now())
-                                        .build();
+            return new ProcessedUrlRow(
+                    item.getRowNumber(),
+                    originalUrl != null ? originalUrl : "",
+                    null,
+                    null,
+                    null,
+                    null,
+                    RecordStatus.FAILED,
+                    "Invalid URL format: must be a valid http/https URL",
+                    batchRef
+            );
         }
 
-        return UrlFileBatchRecords.builder()
-                .batch(batchRef)
-                .rowNumber(item.getRowNumber())
-                .originalUrl(originalUrl)
-                .status(RecordStatus.PENDING)
-                .customAlias(item.getCustomAlias())
-                .expiredAt(item.getExpiredAt())
-                .description(item.getDescription())
-                .tags(item.getTags())
-                .build();
+        return new ProcessedUrlRow(
+                item.getRowNumber(),
+                originalUrl,
+                item.getCustomAlias(),
+                item.getExpiredAt(),
+                item.getDescription(),
+                item.getTags(),
+                RecordStatus.PENDING,
+                null,
+                batchRef
+        );
     }
 
     private boolean isValidUrl(String url) {

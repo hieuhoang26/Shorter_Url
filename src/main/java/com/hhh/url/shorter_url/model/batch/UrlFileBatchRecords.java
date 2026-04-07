@@ -5,7 +5,6 @@ import com.hhh.url.shorter_url.util.RecordStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -46,16 +45,4 @@ public class UrlFileBatchRecords extends BaseEntity {
     @JoinColumn(name = "batch_id", nullable = false)
     private UrlFileBatches batch;
 
-    /** Carrier fields — not persisted. Used to pass data from Processor to Writer within a chunk. */
-    @Transient
-    private String customAlias;
-
-    @Transient
-    private LocalDateTime expiredAt;
-
-    @Transient
-    private String description;
-
-    @Transient
-    private String tags;
 }

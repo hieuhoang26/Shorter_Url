@@ -13,13 +13,17 @@ import org.springframework.core.io.Resource;
  * <p>Downloads the file from object storage using the {@code objectStoragePath} job parameter,
  * then delegates row iteration and mapping to the parent {@link PoiReader}.
  *
+ * <p>The file bytes are downloaded once and cached in a field so that job restarts (which call
+ * {@link #open} again) do not trigger a redundant S3 download.
+ *
  * <p>Instantiated as a {@code @StepScope} bean in {@code UrlBatchJobConfig}; job parameters
- * are injected via SPEL at step-execution time.
+ * are injected via SpEL at step-execution time.
  */
 public class UrlExcelItemReader extends PoiReader<UrlRowDTO> {
 
     private final ObjectStorageService objectStorageService;
     private final String objectStoragePath;
+    private byte[] cachedBytes;
 
     public UrlExcelItemReader(ObjectStorageService objectStorageService,
                                String objectStoragePath) {
@@ -28,12 +32,15 @@ public class UrlExcelItemReader extends PoiReader<UrlRowDTO> {
     }
 
     /**
-     * Downloads the XLSX file bytes from object storage and wraps them as a {@link Resource}.
+     * Returns the XLSX file as a {@link Resource}, downloading from object storage on the first
+     * call and serving the cached bytes on subsequent calls (e.g. job restart).
      */
     @Override
     protected Resource getResource() {
-        byte[] bytes = objectStorageService.downloadObject(objectStoragePath);
-        return new ByteArrayResource(bytes);
+        if (cachedBytes == null) {
+            cachedBytes = objectStorageService.downloadObject(objectStoragePath);
+        }
+        return new ByteArrayResource(cachedBytes);
     }
 
     @Override
