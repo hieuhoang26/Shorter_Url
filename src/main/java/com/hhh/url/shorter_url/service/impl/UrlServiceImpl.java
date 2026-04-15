@@ -2,7 +2,9 @@ package com.hhh.url.shorter_url.service.impl;
 
 import com.hhh.url.shorter_url.dto.response.PreSignResponse;
 import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
+import com.hhh.url.shorter_url.exception.BadRequestException;
 import com.hhh.url.shorter_url.exception.ResourceNotFoundException;
+import com.hhh.url.shorter_url.exception.UrlExpiredException;
 import com.hhh.url.shorter_url.dto.request.UrlRequest;
 import com.hhh.url.shorter_url.dto.response.UrlResponse;
 import com.hhh.url.shorter_url.mapper.UrlMapper;
@@ -20,6 +22,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
@@ -83,15 +86,29 @@ public class UrlServiceImpl implements UrlService {
         entity.setOriginalUrl(request.getOriginalUrl());
         entity.setDomain(URL_LOCAL);
         entity.setExpiredAt(LocalDateTime.now().plus(Duration.ofDays(5)));
-        urlRepository.save(entity);
-        entity.setShortCode(base62Service.generateShortCode(entity.getId()));
-        return urlMapper.toResponse(entity);
+        entity.setDescription(request.getDescription());
+        entity.setTags(request.getTags());
+        try {
+            urlRepository.save(entity);
+            if (request.getCustomAlias() != null && !request.getCustomAlias().isBlank()) {
+                entity.setShortCode(request.getCustomAlias());
+                entity.setCustomAlias(request.getCustomAlias());
+            } else {
+                entity.setShortCode(base62Service.generateShortCode(entity.getId()));
+            }
+            return urlMapper.toResponse(entity);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BadRequestException("Custom alias already in use");
+        }
     }
 
     @Override
     public String redirect(String code) {
         Url entity = urlRepository.findByShortCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + code));
+        if (entity.getExpiredAt() != null && entity.getExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new UrlExpiredException("URL has expired");
+        }
         return entity.getOriginalUrl();
     }
 
@@ -115,11 +132,16 @@ public class UrlServiceImpl implements UrlService {
     public UrlResponse update(long id, UrlRequest request) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
-        
         urlMapper.updateEntityFromRequest(request, entity);
-        
-        Url savedEntity = urlRepository.save(entity);
-        return urlMapper.toResponse(savedEntity);
+        if (request.getCustomAlias() != null && !request.getCustomAlias().isBlank()) {
+            entity.setShortCode(request.getCustomAlias());
+        }
+        try {
+            Url savedEntity = urlRepository.save(entity);
+            return urlMapper.toResponse(savedEntity);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BadRequestException("Custom alias already in use");
+        }
     }
 
     @Override

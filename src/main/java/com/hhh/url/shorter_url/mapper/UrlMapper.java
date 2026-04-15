@@ -14,6 +14,9 @@ public interface UrlMapper {
     UrlResponse toResponse(Url entity);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "shortCode", ignore = true)
+    @Mapping(target = "domain", ignore = true)
+    @Mapping(target = "expiredAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
