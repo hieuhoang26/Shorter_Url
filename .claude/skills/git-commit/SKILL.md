@@ -1,6 +1,8 @@
 ---
 name: git-commit
 description: Generate conventional commit messages for Java projects. Use when user says "commit", "create commit", "commit changes", or after completing code changes that need to be committed.
+disable-model-invocation: true
+
 ---
 
 # Git Commit Message Skill

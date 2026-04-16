@@ -1,6 +1,7 @@
 ---
 name: maven-dependency-audit
 description: Audit Maven dependencies for outdated versions, security vulnerabilities, and conflicts. Use when user says "check dependencies", "audit dependencies", "outdated deps", or before releases.
+disable-model-invocation: true
 ---
 
 # Maven Dependency Audit Skill
