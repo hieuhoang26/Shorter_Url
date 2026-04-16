@@ -35,6 +35,10 @@ app:
   batch:
     chunk-size: 100
     skip-limit: 1000
+  shortener:
+    secret-key: 238947239487
+    charset: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    min-length: 6
 
 management:
   endpoints:

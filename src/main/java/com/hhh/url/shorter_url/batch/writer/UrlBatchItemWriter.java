@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.hhh.url.shorter_url.util.Constant.URL_LOCAL;
 
@@ -91,18 +93,126 @@ public class UrlBatchItemWriter implements ItemWriter<ProcessedUrlRow> {
     }
 
     /**
-     * Inserts URLs and their batch records for all PENDING rows.
+     * Applies upsert logic (cases A–D from the cheatsheet) then inserts only truly new URLs.
      *
-     * <p>Uses {@code saveAllAndFlush} for the initial URL insert so that the DB-assigned
-     * {@code id} is available immediately for Base62 short code generation.
+     * <p>Two bulk lookups are issued per chunk regardless of chunk size:
+     * <ol>
+     *   <li>Find existing auto-generated records by {@code originalUrl} (Case A).</li>
+     *   <li>Find existing records by {@code customAlias} (Cases B / C).</li>
+     * </ol>
+     *
+     * <p>Classification:
+     * <ul>
+     *   <li><b>Case A</b>: same {@code originalUrl}, no alias → reuse existing record.</li>
+     *   <li><b>Case B</b>: same {@code originalUrl} + same alias → reuse existing record.</li>
+     *   <li><b>Case C</b>: different {@code originalUrl}, alias already taken → FAILED.</li>
+     *   <li><b>Case D / new</b>: everything else → insert new URL.</li>
+     * </ul>
      */
     private void persistPendingRecords(List<ProcessedUrlRow> pendingRows) {
         if (pendingRows.isEmpty()) {
             return;
         }
 
+        // ── Bulk lookups ─────────────────────────────────────────────────────────
+        List<String> noAliasUrls = pendingRows.stream()
+                .filter(r -> r.customAlias() == null || r.customAlias().isBlank())
+                .map(ProcessedUrlRow::originalUrl)
+                .distinct()
+                .toList();
+
+        List<String> aliases = pendingRows.stream()
+                .filter(r -> r.customAlias() != null && !r.customAlias().isBlank())
+                .map(ProcessedUrlRow::customAlias)
+                .distinct()
+                .toList();
+
+        // Case A lookup: originalUrl → existing Url (no alias)
+        Map<String, Url> existingByOriginalUrl = noAliasUrls.isEmpty()
+                ? Map.of()
+                : urlRepository.findByOriginalUrlInAndCustomAliasIsNull(noAliasUrls)
+                        .stream().collect(Collectors.toMap(Url::getOriginalUrl, u -> u));
+
+        // Case B/C lookup: customAlias → existing Url
+        Map<String, Url> existingByAlias = aliases.isEmpty()
+                ? Map.of()
+                : urlRepository.findByCustomAliasIn(aliases)
+                        .stream().collect(Collectors.toMap(Url::getCustomAlias, u -> u));
+
+        // ── Classify rows ─────────────────────────────────────────────────────────
+        List<ProcessedUrlRow> reusedRows  = new ArrayList<>();
+        List<ProcessedUrlRow> caseC_failed = new ArrayList<>();
+        List<ProcessedUrlRow> toInsert    = new ArrayList<>();
+
+        for (ProcessedUrlRow row : pendingRows) {
+            boolean hasAlias = row.customAlias() != null && !row.customAlias().isBlank();
+
+            if (!hasAlias) {
+                Url existing = existingByOriginalUrl.get(row.originalUrl());
+                if (existing != null) {
+                    reusedRows.add(row);          // Case A
+                } else {
+                    toInsert.add(row);
+                }
+            } else {
+                Url existing = existingByAlias.get(row.customAlias());
+                if (existing != null && existing.getOriginalUrl().equals(row.originalUrl())) {
+                    reusedRows.add(row);           // Case B
+                } else if (existing != null) {
+                    caseC_failed.add(row);         // Case C — alias taken by different URL
+                } else {
+                    toInsert.add(row);             // Case D or brand new
+                }
+            }
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        // ── Reused rows → SUCCESS with existing short code ────────────────────────
+        if (!reusedRows.isEmpty()) {
+            List<UrlFileBatchRecords> reusedRecords = reusedRows.stream()
+                    .map(row -> {
+                        boolean hasAlias = row.customAlias() != null && !row.customAlias().isBlank();
+                        String shortCode = hasAlias
+                                ? existingByAlias.get(row.customAlias()).getShortCode()
+                                : existingByOriginalUrl.get(row.originalUrl()).getShortCode();
+                        return UrlFileBatchRecords.builder()
+                                .batch(row.batchRef())
+                                .rowNumber(row.rowNumber())
+                                .originalUrl(row.originalUrl())
+                                .shortCode(shortCode)
+                                .status(RecordStatus.SUCCESS)
+                                .processedAt(now)
+                                .build();
+                    })
+                    .toList();
+            recordRepository.saveAll(reusedRecords);
+            log.debug("Reused {} existing records (Case A/B)", reusedRecords.size());
+        }
+
+        // ── Case C rows → FAILED ──────────────────────────────────────────────────
+        if (!caseC_failed.isEmpty()) {
+            List<UrlFileBatchRecords> failedRecords = caseC_failed.stream()
+                    .map(row -> UrlFileBatchRecords.builder()
+                            .batch(row.batchRef())
+                            .rowNumber(row.rowNumber())
+                            .originalUrl(row.originalUrl())
+                            .status(RecordStatus.FAILED)
+                            .errorMessage("Custom alias '" + row.customAlias() + "' is already used by a different URL")
+                            .processedAt(now)
+                            .build())
+                    .toList();
+            recordRepository.saveAll(failedRecords);
+            log.debug("Rejected {} rows with taken aliases (Case C)", failedRecords.size());
+        }
+
+        // ── New rows → insert ─────────────────────────────────────────────────────
+        if (toInsert.isEmpty()) {
+            return;
+        }
+
         // Step 1 — insert URLs without short codes to obtain DB-assigned IDs
-        List<Url> urls = pendingRows.stream()
+        List<Url> urls = toInsert.stream()
                 .map(row -> {
                     Url url = new Url();
                     url.setOriginalUrl(row.originalUrl());
@@ -119,21 +229,23 @@ public class UrlBatchItemWriter implements ItemWriter<ProcessedUrlRow> {
         urlRepository.saveAllAndFlush(urls);  // flush assigns IDs
 
         // Step 2 — generate / assign short codes, then batch-update
-        for (int i = 0; i < pendingRows.size(); i++) {
-            ProcessedUrlRow row = pendingRows.get(i);
+        for (int i = 0; i < toInsert.size(); i++) {
+            ProcessedUrlRow row = toInsert.get(i);
             Url url = urls.get(i);
             String shortCode = (row.customAlias() != null && !row.customAlias().isBlank())
                     ? row.customAlias()
                     : base62Service.generateShortCode(url.getId());
             url.setShortCode(shortCode);
+            if (row.customAlias() != null && !row.customAlias().isBlank()) {
+                url.setCustomAlias(row.customAlias());
+            }
         }
         urlRepository.saveAll(urls);
 
-        // Step 3 — persist SUCCESS batch records
-        OffsetDateTime now = OffsetDateTime.now();
-        List<UrlFileBatchRecords> successEntities = new ArrayList<>(pendingRows.size());
-        for (int i = 0; i < pendingRows.size(); i++) {
-            ProcessedUrlRow row = pendingRows.get(i);
+        // Step 3 — persist SUCCESS batch records for new rows
+        List<UrlFileBatchRecords> successEntities = new ArrayList<>(toInsert.size());
+        for (int i = 0; i < toInsert.size(); i++) {
+            ProcessedUrlRow row = toInsert.get(i);
             successEntities.add(UrlFileBatchRecords.builder()
                     .batch(row.batchRef())
                     .rowNumber(row.rowNumber())
@@ -144,6 +256,6 @@ public class UrlBatchItemWriter implements ItemWriter<ProcessedUrlRow> {
                     .build());
         }
         recordRepository.saveAll(successEntities);
-        log.debug("Persisted {} SUCCESS records", successEntities.size());
+        log.debug("Inserted {} new URL records", successEntities.size());
     }
 }

@@ -29,6 +29,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static com.hhh.url.shorter_url.util.Constant.TEMPLATE_FILE;
 import static com.hhh.url.shorter_url.util.Constant.URL_LOCAL;
@@ -82,6 +83,25 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public UrlResponse create(UrlRequest request) {
+        boolean hasAlias = request.getCustomAlias() != null && !request.getCustomAlias().isBlank();
+
+        if (!hasAlias) {
+            // Case A: same originalUrl, no custom alias → reuse existing record
+            Optional<Url> existing = urlRepository.findByOriginalUrlAndCustomAliasIsNull(request.getOriginalUrl());
+            if (existing.isPresent()) {
+                return urlMapper.toResponse(existing.get());
+            }
+        } else {
+            // Case B: same originalUrl + same custom alias → reuse existing record
+            Optional<Url> existing = urlRepository.findByOriginalUrlAndCustomAlias(
+                    request.getOriginalUrl(), request.getCustomAlias());
+            if (existing.isPresent()) {
+                return urlMapper.toResponse(existing.get());
+            }
+            // Case C (different originalUrl, alias taken) → caught below by unique constraint
+            // Case D (same originalUrl, new alias) → falls through to insert
+        }
+
         Url entity = new Url();
         entity.setOriginalUrl(request.getOriginalUrl());
         entity.setDomain(URL_LOCAL);
@@ -90,7 +110,7 @@ public class UrlServiceImpl implements UrlService {
         entity.setTags(request.getTags());
         try {
             urlRepository.save(entity);
-            if (request.getCustomAlias() != null && !request.getCustomAlias().isBlank()) {
+            if (hasAlias) {
                 entity.setShortCode(request.getCustomAlias());
                 entity.setCustomAlias(request.getCustomAlias());
             } else {
