@@ -1,7 +1,6 @@
 ---
 name: design-patterns
 description: Common design patterns with Java examples (Factory, Builder, Strategy, Observer, Decorator, etc.). Use when user asks "implement pattern", "use factory", "strategy pattern", or when designing extensible components.
-disable-model-invocation: true
 ---
 
 # Design Patterns Skill

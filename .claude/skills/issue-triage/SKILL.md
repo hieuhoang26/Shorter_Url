@@ -1,7 +1,6 @@
 ---
 name: issue-triage
 description: Triage and categorize GitHub issues with priority labels. Use when user says "triage issues", "check issues", "review open issues", or during regular maintenance of GitHub issue backlog.
-disable-model-invocation: true
 ---
 
 # Issue Triage Skill

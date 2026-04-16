@@ -1,7 +1,6 @@
 ---
 name: jpa-patterns
 description: JPA/Hibernate patterns and common pitfalls (N+1, lazy loading, transactions, queries). Use when user has JPA performance issues, LazyInitializationException, or asks about entity relationships and fetching strategies.
-disable-model-invocation: true
 ---
 
 # JPA Patterns Skill

@@ -1,7 +1,6 @@
 ---
 name: api-contract-review
 description: Review REST API contracts for HTTP semantics, versioning, backward compatibility, and response consistency. Use when user asks "review API", "check endpoints", "REST review", or before releasing API changes.
-disable-model-invocation: true
 ---
 
 # API Contract Review Skill

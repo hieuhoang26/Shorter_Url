@@ -1,7 +1,6 @@
 ---
 name: spring-boot-patterns
 description: Spring Boot best practices and patterns. Use when creating controllers, services, repositories, or when user asks about Spring Boot architecture, REST APIs, exception handling, or JPA patterns.
-disable-model-invocation: true
 ---
 
 # Spring Boot Patterns Skill
