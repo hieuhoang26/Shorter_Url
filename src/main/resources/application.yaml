@@ -20,6 +20,11 @@ spring:
       initialize-schema: always   # create Spring Batch job tables on PostgreSQL
     job:
       enabled: false              # prevent auto-run of jobs at startup
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
 
 aws:
   s3:

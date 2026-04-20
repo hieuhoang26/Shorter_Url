@@ -1,5 +1,6 @@
 package com.hhh.url.shorter_url.service.impl;
 
+import com.hhh.url.shorter_url.dto.cache.UrlCacheEntry;
 import com.hhh.url.shorter_url.dto.response.PreSignResponse;
 import com.hhh.url.shorter_url.dto.response.TemplateFileResponse;
 import com.hhh.url.shorter_url.exception.BadRequestException;
@@ -19,10 +20,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
@@ -30,7 +32,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import static com.hhh.url.shorter_url.util.CacheKeyConstant.*;
 import static com.hhh.url.shorter_url.util.Constant.TEMPLATE_FILE;
 import static com.hhh.url.shorter_url.util.Constant.URL_LOCAL;
 
@@ -44,6 +48,7 @@ public class UrlServiceImpl implements UrlService {
     private final Base62Service base62Service;
     private final UrlMapper urlMapper;
     private final ObjectStorageService objectStorageService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
 
     @Value("classpath:/static/"+TEMPLATE_FILE)
@@ -124,12 +129,52 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     public String redirect(String code) {
-        Url entity = urlRepository.findByShortCode(code)
-                .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + code));
+        String key = shortUrlKey(code);
+        Object cached = redisTemplate.opsForValue().get(key);
+
+        if (NULL_SENTINEL.equals(cached)) {
+            throw new ResourceNotFoundException("Url not found with id: " + code);
+        }
+
+        if (cached instanceof UrlCacheEntry entry) {
+            if (entry.getExpiredAt() != null && entry.getExpiredAt().isBefore(LocalDateTime.now())) {
+                throw new UrlExpiredException("URL has expired");
+            }
+            return entry.getOriginalUrl();
+        }
+
+        Optional<Url> optional = urlRepository.findByShortCode(code);
+        if (optional.isEmpty()) {
+            redisTemplate.opsForValue().set(key, NULL_SENTINEL, NULL_TTL_MINUTES, TimeUnit.MINUTES);
+            throw new ResourceNotFoundException("Url not found with id: " + code);
+        }
+
+        Url entity = optional.get();
         if (entity.getExpiredAt() != null && entity.getExpiredAt().isBefore(LocalDateTime.now())) {
             throw new UrlExpiredException("URL has expired");
         }
+
+        UrlCacheEntry entry = UrlCacheEntry.builder()
+                .originalUrl(entity.getOriginalUrl())
+                .expiredAt(entity.getExpiredAt())
+                .build();
+        Duration ttl = computeTtl(entity.getExpiredAt());
+        redisTemplate.opsForValue().set(key, entry, ttl.toSeconds(), TimeUnit.SECONDS);
+
         return entity.getOriginalUrl();
+    }
+
+    private Duration computeTtl(LocalDateTime expiredAt) {
+        if (expiredAt == null) {
+            return Duration.ofHours(DEFAULT_TTL_HOURS);
+        }
+        Duration remaining = Duration.between(LocalDateTime.now(), expiredAt);
+        if (remaining.isNegative() || remaining.isZero()) {
+            return Duration.ofSeconds(1);
+        }
+        return remaining.compareTo(Duration.ofHours(DEFAULT_TTL_HOURS)) < 0
+                ? remaining
+                : Duration.ofHours(DEFAULT_TTL_HOURS);
     }
 
     @Override
@@ -152,12 +197,17 @@ public class UrlServiceImpl implements UrlService {
     public UrlResponse update(long id, UrlRequest request) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
+        String oldShortCode = entity.getShortCode();
         urlMapper.updateEntityFromRequest(request, entity);
         if (request.getCustomAlias() != null && !request.getCustomAlias().isBlank()) {
             entity.setShortCode(request.getCustomAlias());
         }
         try {
             Url savedEntity = urlRepository.save(entity);
+            redisTemplate.delete(shortUrlKey(oldShortCode));
+            if (!oldShortCode.equals(savedEntity.getShortCode())) {
+                redisTemplate.delete(shortUrlKey(savedEntity.getShortCode()));
+            }
             return urlMapper.toResponse(savedEntity);
         } catch (DataIntegrityViolationException ex) {
             throw new BadRequestException("Custom alias already in use");
@@ -169,7 +219,9 @@ public class UrlServiceImpl implements UrlService {
     public void delete(long id) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
+        String shortCode = entity.getShortCode();
         urlRepository.delete(entity);
+        redisTemplate.delete(shortUrlKey(shortCode));
     }
 
     @Override
