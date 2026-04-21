@@ -135,7 +135,13 @@ public class UrlServiceImpl implements UrlService {
     @Cacheable(value = "url_redirect", key = "#code")
     public String redirect(String code) {
         String key = shortUrlKey(code);
-        Object cached = redisTemplate.opsForValue().get(key);
+
+        Object cached = null;
+        try {
+            cached = redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.warn("Redis read failed, falling back to DB: {}", e.getMessage());
+        }
 
         if (NULL_SENTINEL.equals(cached)) {
             throw new ResourceNotFoundException("Url not found with id: " + code);
@@ -150,7 +156,11 @@ public class UrlServiceImpl implements UrlService {
 
         Optional<Url> optional = urlRepository.findByShortCode(code);
         if (optional.isEmpty()) {
-            redisTemplate.opsForValue().set(key, NULL_SENTINEL, NULL_TTL_MINUTES, TimeUnit.MINUTES);
+            try {
+                redisTemplate.opsForValue().set(key, NULL_SENTINEL, NULL_TTL_MINUTES, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.warn("Redis write failed, null sentinel not cached: {}", e.getMessage());
+            }
             throw new ResourceNotFoundException("Url not found with id: " + code);
         }
 
@@ -164,7 +174,11 @@ public class UrlServiceImpl implements UrlService {
                 .expiredAt(entity.getExpiredAt())
                 .build();
         Duration ttl = computeTtl(entity.getExpiredAt());
-        redisTemplate.opsForValue().set(key, entry, ttl.toSeconds(), TimeUnit.SECONDS);
+        try {
+            redisTemplate.opsForValue().set(key, entry, ttl.toSeconds(), TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Redis write failed, cache not populated: {}", e.getMessage());
+        }
 
         return entity.getOriginalUrl();
     }
