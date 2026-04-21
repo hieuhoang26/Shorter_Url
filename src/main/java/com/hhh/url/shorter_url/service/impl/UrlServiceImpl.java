@@ -229,9 +229,13 @@ public class UrlServiceImpl implements UrlService {
         }
         try {
             Url savedEntity = urlRepository.save(entity);
-            redisTemplate.delete(shortUrlKey(oldShortCode));
-            if (!oldShortCode.equals(savedEntity.getShortCode())) {
-                redisTemplate.delete(shortUrlKey(savedEntity.getShortCode()));
+            try {
+                redisTemplate.delete(shortUrlKey(oldShortCode));
+                if (!oldShortCode.equals(savedEntity.getShortCode())) {
+                    redisTemplate.delete(shortUrlKey(savedEntity.getShortCode()));
+                }
+            } catch (DataAccessException e) {
+                log.warn("Redis delete failed during update, stale entry may remain [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
             }
             return urlMapper.toResponse(savedEntity);
         } catch (DataIntegrityViolationException ex) {
@@ -250,7 +254,11 @@ public class UrlServiceImpl implements UrlService {
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
         String shortCode = entity.getShortCode();
         urlRepository.delete(entity);
-        redisTemplate.delete(shortUrlKey(shortCode));
+        try {
+            redisTemplate.delete(shortUrlKey(shortCode));
+        } catch (DataAccessException e) {
+            log.warn("Redis delete failed during delete, stale entry may remain [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
+        }
     }
 
     @Override
