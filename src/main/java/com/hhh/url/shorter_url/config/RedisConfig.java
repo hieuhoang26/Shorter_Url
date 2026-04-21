@@ -42,6 +42,9 @@ public class RedisConfig implements CachingConfigurer {
         return template;
     }
 
+    // CacheManager backed by Redis with JSON serialization and a default TTL.
+    // NOTE: Do not also override CachingConfigurer.cacheManager() — the default (null)
+    // tells Spring to pick up this @Bean automatically, which is the correct behaviour.
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         ObjectMapper mapper = new ObjectMapper();
