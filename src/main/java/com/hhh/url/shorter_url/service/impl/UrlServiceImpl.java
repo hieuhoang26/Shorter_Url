@@ -26,6 +26,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -139,8 +140,8 @@ public class UrlServiceImpl implements UrlService {
         Object cached = null;
         try {
             cached = redisTemplate.opsForValue().get(key);
-        } catch (Exception e) {
-            log.warn("Redis read failed, falling back to DB: {}", e.getMessage());
+        } catch (DataAccessException e) {
+            log.warn("Redis read failed, falling back to DB [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
         if (NULL_SENTINEL.equals(cached)) {
@@ -158,8 +159,8 @@ public class UrlServiceImpl implements UrlService {
         if (optional.isEmpty()) {
             try {
                 redisTemplate.opsForValue().set(key, NULL_SENTINEL, NULL_TTL_MINUTES, TimeUnit.MINUTES);
-            } catch (Exception e) {
-                log.warn("Redis write failed, null sentinel not cached: {}", e.getMessage());
+            } catch (DataAccessException e) {
+                log.warn("Redis write failed, null sentinel not cached [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
             }
             throw new ResourceNotFoundException("Url not found with id: " + code);
         }
@@ -176,8 +177,8 @@ public class UrlServiceImpl implements UrlService {
         Duration ttl = computeTtl(entity.getExpiredAt());
         try {
             redisTemplate.opsForValue().set(key, entry, ttl.toSeconds(), TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.warn("Redis write failed, cache not populated: {}", e.getMessage());
+        } catch (DataAccessException e) {
+            log.warn("Redis write failed, cache not populated [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
         return entity.getOriginalUrl();
