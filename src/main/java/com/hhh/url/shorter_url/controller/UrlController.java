@@ -28,19 +28,6 @@ public class UrlController {
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(data, "Url created successfully"));
     }
-//    @PostMapping
-//    public ResponseEntity<ApiResponse<List<BulkUrlResponse>>> createBulkUrls(@Valid @RequestBody UrlRequest request) {
-//        UrlResponse data = urlService.create(request);
-//        return ResponseEntity
-//                .status(HttpStatus.CREATED)
-//                .body(ApiResponse.success(data, "Url created successfully"));
-//    }
-    @GetMapping("/redirect")
-    public ResponseEntity<ApiResponse<String>> redirect(@RequestParam String shortCode){
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(urlService.redirect(shortCode), "Url created successfully"));
-    }
     @GetMapping("/template")
     public ResponseEntity<ApiResponse<TemplateFileResponse>> getTemplate(){
         return ResponseEntity

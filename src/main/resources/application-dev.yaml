@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: true
+
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+app:
+  shortener:
+    secret-key: ${SHORTENER_SECRET_KEY}

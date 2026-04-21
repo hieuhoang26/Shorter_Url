@@ -1,13 +1,15 @@
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: shorter-url
   datasource:
-    url: jdbc:postgresql://localhost:5432/shorter_url
-    username: postgres
-    password: 12345678
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/shorter_url}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: validate  
     show-sql: true
     properties:
       hibernate:
@@ -24,14 +26,17 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      timeout: 2000ms
+      password: ${REDIS_PASSWORD:}
+
+cache:
+  ttl-hours: 24
 
 aws:
   s3:
     bucket: shorter-url-390402567579-ap-southeast-1-an
     region: ap-southeast-1
-    access-key: ${AWS_ACCESS_KEY:AKIAVVZOONWNQCOU66K3}
-    secret-key: ${AWS_SECRET_KEY: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}
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
 
 server:
   port: 8080
@@ -41,7 +46,7 @@ app:
     chunk-size: 100
     skip-limit: 1000
   shortener:
-    secret-key: 238947239487
+    secret-key: ${SHORTENER_SECRET_KEY}
     charset: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     min-length: 6
 

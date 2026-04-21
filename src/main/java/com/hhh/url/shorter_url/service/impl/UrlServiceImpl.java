@@ -18,6 +18,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -121,6 +124,7 @@ public class UrlServiceImpl implements UrlService {
             } else {
                 entity.setShortCode(base62Service.generateShortCode(entity.getId()));
             }
+            urlRepository.save(entity);
             return urlMapper.toResponse(entity);
         } catch (DataIntegrityViolationException ex) {
             throw new BadRequestException("Custom alias already in use");
@@ -128,6 +132,7 @@ public class UrlServiceImpl implements UrlService {
     }
 
     @Override
+    @Cacheable(value = "url_redirect", key = "#code")
     public String redirect(String code) {
         String key = shortUrlKey(code);
         Object cached = redisTemplate.opsForValue().get(key);
@@ -179,6 +184,7 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "url_details", key = "#id")
     public UrlResponse getById(long id) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
@@ -194,6 +200,10 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "url_details", key = "#id"),
+            @CacheEvict(value = "url_redirect", allEntries = true)
+    })
     public UrlResponse update(long id, UrlRequest request) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));
@@ -216,6 +226,10 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "url_details", key = "#id"),
+            @CacheEvict(value = "url_redirect", allEntries = true)
+    })
     public void delete(long id) {
         Url entity = urlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Url not found with id: " + id));

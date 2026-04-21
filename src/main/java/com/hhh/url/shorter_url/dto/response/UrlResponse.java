@@ -16,7 +16,6 @@ public class UrlResponse {
     private String shortCode;
     private String originalUrl;
     private String domain;
-    private String customAlias;
     private String description;
     private String tags;
     private LocalDateTime expiredAt;
