@@ -26,7 +26,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -140,7 +139,7 @@ public class UrlServiceImpl implements UrlService {
         Object cached = null;
         try {
             cached = redisTemplate.opsForValue().get(key);
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             log.warn("Redis read failed, falling back to DB [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
@@ -159,7 +158,7 @@ public class UrlServiceImpl implements UrlService {
         if (optional.isEmpty()) {
             try {
                 redisTemplate.opsForValue().set(key, NULL_SENTINEL, NULL_TTL_MINUTES, TimeUnit.MINUTES);
-            } catch (DataAccessException e) {
+            } catch (Exception e) {
                 log.warn("Redis write failed, null sentinel not cached [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
             }
             throw new ResourceNotFoundException("Url not found with id: " + code);
@@ -177,7 +176,7 @@ public class UrlServiceImpl implements UrlService {
         Duration ttl = computeTtl(entity.getExpiredAt());
         try {
             redisTemplate.opsForValue().set(key, entry, ttl.toSeconds(), TimeUnit.SECONDS);
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             log.warn("Redis write failed, cache not populated [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
@@ -234,7 +233,7 @@ public class UrlServiceImpl implements UrlService {
                 if (!oldShortCode.equals(savedEntity.getShortCode())) {
                     redisTemplate.delete(shortUrlKey(savedEntity.getShortCode()));
                 }
-            } catch (DataAccessException e) {
+            } catch (Exception e) {
                 log.warn("Redis delete failed during update, stale entry may remain [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
             }
             return urlMapper.toResponse(savedEntity);
@@ -256,7 +255,7 @@ public class UrlServiceImpl implements UrlService {
         urlRepository.delete(entity);
         try {
             redisTemplate.delete(shortUrlKey(shortCode));
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             log.warn("Redis delete failed during delete, stale entry may remain [{}]: {}", e.getClass().getSimpleName(), e.getMessage());
         }
     }
