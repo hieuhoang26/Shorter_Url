@@ -9,21 +9,22 @@ public class LoggingCacheErrorHandler implements CacheErrorHandler {
 
     @Override
     public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
-        log.warn("Cache GET failed [cache={}, key={}]: {}", cache.getName(), key, e.getMessage());
+        log.warn("Cache GET failed [cache={}, key={}] ({}): {}", cache.getName(), key, e.getClass().getSimpleName(), e.getMessage());
     }
 
     @Override
     public void handleCachePutError(RuntimeException e, Cache cache, Object key, Object value) {
-        log.warn("Cache PUT failed [cache={}, key={}]: {}", cache.getName(), key, e.getMessage());
+        // value intentionally omitted — may contain sensitive data
+        log.warn("Cache PUT failed [cache={}, key={}] ({}): {}", cache.getName(), key, e.getClass().getSimpleName(), e.getMessage());
     }
 
     @Override
     public void handleCacheEvictError(RuntimeException e, Cache cache, Object key) {
-        log.warn("Cache EVICT failed [cache={}, key={}]: {}", cache.getName(), key, e.getMessage());
+        log.warn("Cache EVICT failed [cache={}, key={}] ({}): {}", cache.getName(), key, e.getClass().getSimpleName(), e.getMessage());
     }
 
     @Override
     public void handleCacheClearError(RuntimeException e, Cache cache) {
-        log.warn("Cache CLEAR failed [cache={}]: {}", cache.getName(), e.getMessage());
+        log.warn("Cache CLEAR failed [cache={}] ({}): {}", cache.getName(), e.getClass().getSimpleName(), e.getMessage());
     }
 }
