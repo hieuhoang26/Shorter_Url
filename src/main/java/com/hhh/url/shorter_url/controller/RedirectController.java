@@ -21,5 +21,8 @@ public class RedirectController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(originalUrl, "Redirect url successfully"));
+//                .status(HttpStatus.MOVED_PERMANENTLY)
+//                .location(java.net.URI.create(originalUrl))
+//                .build();
     }
 }
