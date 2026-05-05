@@ -14,7 +14,7 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      - aws s3 cp target/*.jar s3://codebuild-ex
+      - aws s3 cp target/*.jar s3://codebuild-ex/builds
 artifacts:
   files:
     - target/**/*.jar
